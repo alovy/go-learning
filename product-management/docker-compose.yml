@@ -10,7 +10,7 @@ services:
       - db
 
   db:
-    image: postgres:latest
+    image: postgres:12.3
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password

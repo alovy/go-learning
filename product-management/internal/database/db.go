@@ -8,11 +8,13 @@ import (
 )
 
 func InitializeDatabase() (*sql.DB, error) {
-	dbUser := config.GetEnv("DB_USER", "")
-	dbPassword := config.GetEnv("DB_PASS", "")
-	dbName := config.GetEnv("DB_NAME", "")
-	dbHost := config.GetEnv("DB_HOST", "db")
-	dbPort := config.GetEnv("DB_PORT", "5432")
+	envs := config.LoadConfig()
+
+	dbUser := envs.DB.Username
+	dbPassword := envs.DB.Password
+	dbName := envs.DB.Name
+	dbHost := envs.DB.Host
+	dbPort := envs.DB.Port
 
 	// Create connection string using environment variables
 	dbURL := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", dbUser, dbPassword, dbName, dbHost, dbPort)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"product-api/internal/config"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -18,16 +19,12 @@ type Claims struct {
 // GenerateToken generates a JWT token with a given username.
 func GenerateToken() (string, error) {
 	// Read JWT secret from environment variables
-	secretKey := os.Getenv("JWT_SECRET_KEY")
-	if secretKey == "" {
-		return "", errors.New("missing JWT secret key in environment")
-	}
+	envs := config.LoadConfig()
 
-	// Optionally, read the token expiration time from env or set a default (e.g., 1 day)
-	expirationTime := os.Getenv("JWT_EXPIRATION_TIME")
-	if expirationTime == "" {
-		expirationTime = "24h"
-	}
+	secretKey := envs.TOKEN.Secret
+
+	expirationTime := envs.TOKEN.Expiry
+
 	fmt.Println(expirationTime)
 	// Parse expiration time
 	expirationDuration, err := time.ParseDuration(expirationTime)
@@ -35,7 +32,7 @@ func GenerateToken() (string, error) {
 		return "", errors.New("invalid JWT expiration time format")
 	}
 
-	username := os.Getenv("JWT_USERNAME")
+	username := envs.TOKEN.User
 
 	// Create claims
 	claims := Claims{

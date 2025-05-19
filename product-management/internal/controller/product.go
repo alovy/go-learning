@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"math"
@@ -9,18 +8,17 @@ import (
 	"strconv"
 
 	"product-api/internal/model"
+	"product-api/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type product struct {
-	db *sql.DB
+	service service.ProductService
 }
 
-func NewProduct(db *sql.DB) *product {
-	return &product{
-		db: db,
-	}
+func NewProduct(service service.ProductService) *product {
+	return &product{service: service}
 }
 
 func (p *product) Router() chi.Router {
@@ -37,13 +35,13 @@ func (p *product) Router() chi.Router {
 
 // Create function inserts a new product into the database.
 func (p *product) Create(w http.ResponseWriter, r *http.Request) {
-	var product model.Product
-	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
+	var prod model.Product
+	if err := json.NewDecoder(r.Body).Decode(&prod); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	if err := model.CreateProduct(p.db, &product); err != nil {
+	if err := p.service.CreateProduct(&prod); err != nil {
 		http.Error(w, "Error creating product", http.StatusInternalServerError)
 		log.Println(err)
 		return
@@ -51,21 +49,14 @@ func (p *product) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(contentTypeHeader, applicationJSON)
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(product)
+	_ = json.NewEncoder(w).Encode(prod)
 }
 
 func (p *product) Get(w http.ResponseWriter, r *http.Request) {
 	page, limit := parsePaginationParams(r)
 	offset := (page - 1) * limit
 
-	total, err := model.GetTotalProductsCount(p.db)
-	if err != nil {
-		http.Error(w, "Error counting products", http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
-
-	products, err := model.FetchProducts(p.db, limit, offset)
+	products, total, err := p.service.GetAllProducts(limit, offset)
 	if err != nil {
 		http.Error(w, "Error fetching products", http.StatusInternalServerError)
 		log.Println(err)
@@ -106,7 +97,7 @@ func (p *product) GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := model.FetchProductByID(p.db, productID)
+	product, err := p.service.GetProductByID(productID)
 	if err != nil {
 		http.Error(w, "Error fetching the product", http.StatusInternalServerError)
 		log.Println(err)
@@ -134,7 +125,7 @@ func (p *product) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := model.UpdateProduct(p.db, productID, &product)
+	updated, err := p.service.UpdateProduct(productID, &product)
 	if err != nil {
 		http.Error(w, "Error updating product", http.StatusInternalServerError)
 		log.Println(err)
@@ -157,7 +148,7 @@ func (p *product) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted, err := model.DeleteProduct(p.db, productID)
+	deleted, err := p.service.DeleteProduct(productID)
 	if err != nil {
 		http.Error(w, "Error deleting product", http.StatusInternalServerError)
 		log.Println(err)
